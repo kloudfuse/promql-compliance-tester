@@ -61,11 +61,13 @@ func New(refAPI, testAPI PromAPI, queryTweaks []*config.QueryTweak) *Comparer {
 
 // Result tracks a single test case's query comparison result.
 type Result struct {
-	TestCase          *TestCase `json:"testCase"`
-	Diff              string    `json:"diff"`
-	UnexpectedFailure string    `json:"unexpectedFailure"`
-	UnexpectedSuccess bool      `json:"unexpectedSuccess"`
-	Unsupported       bool      `json:"unsupported"`
+	TestCase          *TestCase       `json:"testCase"`
+	Diff              string          `json:"diff"`
+	UnexpectedFailure string          `json:"unexpectedFailure"`
+	UnexpectedSuccess bool            `json:"unexpectedSuccess"`
+	Unsupported       bool            `json:"unsupported"`
+	Durations         []time.Duration `json:"durations"`
+	Range             v1.Range
 }
 
 // Success returns true if the comparison result was successful.
@@ -85,8 +87,12 @@ func (c *Comparer) Compare(tc *TestCase) (*Result, error) {
 	}
 
 	// TODO: Handle warnings (second, ignored return value).
+	start := time.Now()
 	refResult, _, refErr := c.refAPI.QueryRange(ctx, tc.Query, r)
+	duration1 := time.Since(start)
+	start = time.Now()
 	testResult, _, testErr := c.testAPI.QueryRange(ctx, tc.Query, r)
+	duration2 := time.Since(start)
 
 	if (refErr != nil) != tc.ShouldFail {
 		if refErr != nil {
@@ -97,13 +103,13 @@ func (c *Comparer) Compare(tc *TestCase) (*Result, error) {
 
 	if (testErr != nil) != tc.ShouldFail {
 		if testErr != nil {
-			return &Result{TestCase: tc, UnexpectedFailure: testErr.Error(), Unsupported: strings.Contains(testErr.Error(), "501")}, nil
+			return &Result{Range: r, Durations: []time.Duration{duration1, duration2}, TestCase: tc, UnexpectedFailure: testErr.Error(), Unsupported: strings.Contains(testErr.Error(), "501")}, nil
 		}
-		return &Result{TestCase: tc, UnexpectedSuccess: true}, nil
+		return &Result{Range: r, Durations: []time.Duration{duration1, duration2}, TestCase: tc, UnexpectedSuccess: true}, nil
 	}
 
 	if tc.SkipComparison || tc.ShouldFail {
-		return &Result{TestCase: tc}, nil
+		return &Result{TestCase: tc, Durations: []time.Duration{0, 0}, Range: r}, nil
 	}
 
 	sort.Sort(testResult.(model.Matrix))
@@ -119,8 +125,10 @@ func (c *Comparer) Compare(tc *TestCase) (*Result, error) {
 	}
 
 	return &Result{
-		TestCase: tc,
-		Diff:     cmp.Diff(refResult, testResult, c.compareOptions),
+		TestCase:  tc,
+		Diff:      cmp.Diff(refResult, testResult, c.compareOptions),
+		Durations: []time.Duration{duration1, duration2},
+		Range:     r,
 	}, nil
 }
 
