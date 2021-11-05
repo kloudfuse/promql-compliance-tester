@@ -104,7 +104,9 @@ func main() {
 	for _, tc := range expandedTestCases {
 		res, err := comp.Compare(tc)
 		if err != nil {
-			log.Fatalf("Error running comparison: %v", err)
+			log.Infof("Error running comparison: %v", err)
+			log.Infof("testcase: %v", tc)
+			continue
 		}
 		progressBar.Increment()
 		results = append(results, res)
