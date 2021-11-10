@@ -68,6 +68,8 @@ type Result struct {
 	Unsupported       bool            `json:"unsupported"`
 	Durations         []time.Duration `json:"durations"`
 	Range             v1.Range
+	RefResult         model.Value
+	TestResult        model.Value
 }
 
 // Success returns true if the comparison result was successful.
@@ -103,17 +105,16 @@ func (c *Comparer) Compare(tc *TestCase) (*Result, error) {
 
 	if (testErr != nil) != tc.ShouldFail {
 		if testErr != nil {
-			return &Result{Range: r, Durations: []time.Duration{duration1, duration2}, TestCase: tc, UnexpectedFailure: testErr.Error(), Unsupported: strings.Contains(testErr.Error(), "501")}, nil
+			return &Result{RefResult: refResult, TestResult: testResult, Range: r, Durations: []time.Duration{duration1, duration2}, TestCase: tc, UnexpectedFailure: testErr.Error(), Unsupported: strings.Contains(testErr.Error(), "501")}, nil
 		}
-		return &Result{Range: r, Durations: []time.Duration{duration1, duration2}, TestCase: tc, UnexpectedSuccess: true}, nil
+		return &Result{RefResult: refResult, TestResult: testResult, Range: r, Durations: []time.Duration{duration1, duration2}, TestCase: tc, UnexpectedSuccess: true}, nil
 	}
 
 	if tc.SkipComparison || tc.ShouldFail {
-		return &Result{TestCase: tc, Durations: []time.Duration{0, 0}, Range: r}, nil
+		return &Result{RefResult: refResult, TestResult: testResult, TestCase: tc, Durations: []time.Duration{0, 0}, Range: r}, nil
 	}
 
 	sort.Sort(testResult.(model.Matrix))
-
 	for _, qt := range c.queryTweaks {
 		if qt.IgnoreFirstStep {
 			for _, r := range refResult.(model.Matrix) {
@@ -123,12 +124,13 @@ func (c *Comparer) Compare(tc *TestCase) (*Result, error) {
 			}
 		}
 	}
-
 	return &Result{
-		TestCase:  tc,
-		Diff:      cmp.Diff(refResult, testResult, c.compareOptions),
-		Durations: []time.Duration{duration1, duration2},
-		Range:     r,
+		TestCase:   tc,
+		Diff:       cmp.Diff(refResult, testResult, c.compareOptions),
+		Durations:  []time.Duration{duration1, duration2},
+		Range:      r,
+		RefResult:  refResult,
+		TestResult: testResult,
 	}, nil
 }
 
