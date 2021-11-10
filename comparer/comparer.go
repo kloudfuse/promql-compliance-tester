@@ -124,14 +124,25 @@ func (c *Comparer) Compare(tc *TestCase) (*Result, error) {
 			}
 		}
 	}
-	return &Result{
+	result := &Result{
 		TestCase:   tc,
 		Diff:       cmp.Diff(refResult, testResult, c.compareOptions),
 		Durations:  []time.Duration{duration1, duration2},
 		Range:      r,
 		RefResult:  refResult,
 		TestResult: testResult,
-	}, nil
+	}
+
+	if !result.Success() {
+		fmt.Println(tc.Query, r, len(refResult.(model.Matrix)), len(testResult.(model.Matrix)))
+		fmt.Println(refResult)
+		fmt.Println("--------------------")
+		fmt.Println(testResult)
+		fmt.Println("======================")
+		fmt.Println(result.Diff)
+		fmt.Println("**********************")
+	}
+	return result, nil
 }
 
 func addFloatCompareOptions(queryTweaks []*config.QueryTweak, options *cmp.Options) {

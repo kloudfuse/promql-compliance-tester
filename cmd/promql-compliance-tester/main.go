@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/log"
-	"github.com/prometheus/common/model"
 	"github.com/promlabs/promql-compliance-tester/comparer"
 	"github.com/promlabs/promql-compliance-tester/config"
 	"github.com/promlabs/promql-compliance-tester/output"
@@ -118,13 +117,6 @@ func main() {
 		results = append(results, res)
 		if !res.Success() && *stopOnFailure {
 			log.Info("encountered failure.. Stopping")
-			log.Info(tc.Query, res.Range, len(res.RefResult.(model.Matrix)), len(res.TestResult.(model.Matrix)))
-			log.Info(res.RefResult)
-			log.Info("--------------------")
-			log.Info(res.TestResult)
-			log.Info("======================")
-			log.Info(res.Diff)
-			log.Info("**********************")
 			break
 		}
 	}
