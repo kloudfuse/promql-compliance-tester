@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/log"
+	"github.com/prometheus/common/model"
 	"github.com/promlabs/promql-compliance-tester/comparer"
 	"github.com/promlabs/promql-compliance-tester/config"
 	"github.com/promlabs/promql-compliance-tester/output"
@@ -57,6 +58,7 @@ func main() {
 	outputFormat := flag.String("output-format", "text", "The comparison output format. Valid values: [text, html, json]")
 	outputHTMLTemplate := flag.String("output-html-template", "./output/example-output.html", "The HTML template to use when using HTML as the output format.")
 	outputPassing := flag.Bool("output-passing", false, "Whether to also include passing test cases in the output.")
+	stopOnFailure := flag.Bool("stop-on-failure", false, "Whether to stop on first failure")
 	flag.Parse()
 
 	var outp output.Outputter
@@ -106,10 +108,25 @@ func main() {
 		if err != nil {
 			log.Infof("Error running comparison: %v", err)
 			log.Infof("testcase: %v", tc)
+			if *stopOnFailure {
+				break
+			}
 			continue
 		}
+
 		progressBar.Increment()
 		results = append(results, res)
+		if !res.Success() && *stopOnFailure {
+			log.Info("encountered failure.. Stopping")
+			log.Info(tc.Query, res.Range, len(res.RefResult.(model.Matrix)), len(res.TestResult.(model.Matrix)))
+			log.Info(res.RefResult)
+			log.Info("--------------------")
+			log.Info(res.TestResult)
+			log.Info("======================")
+			log.Info(res.Diff)
+			log.Info("**********************")
+			break
+		}
 	}
 	progressBar.Finish()
 
