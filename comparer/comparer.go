@@ -79,7 +79,7 @@ func (r *Result) Success() bool {
 
 // Compare runs a test case query against the reference API and the test API and compares the results.
 func (c *Comparer) Compare(tc *TestCase) (*Result, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 
 	r := v1.Range{
