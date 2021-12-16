@@ -35,6 +35,18 @@ func Text(results []*comparer.Result, includePassing bool, tweaks []*config.Quer
 		var status string
 		impl1Duration += res.Durations[0]
 		impl2Duration += res.Durations[1]
+		comparison := []string{
+			res.TestCase.Query,
+			fmt.Sprintf("%v", containsAggrFn(res.TestCase.Query)),
+			status,
+			fmt.Sprintf("%v", res.Range.Start.UnixNano()/1000000),
+			fmt.Sprintf("%v", res.Range.End.UnixNano()/1000000),
+			fmt.Sprintf("%v", res.Range.Step.Milliseconds()),
+			fmt.Sprintf("%v", res.Durations[0].Milliseconds()),
+			fmt.Sprintf("%v", res.Durations[1].Milliseconds()),
+		}
+		_ = w.Write(comparison)
+
 		if res.Success() {
 			successes++
 			if !includePassing {
@@ -70,17 +82,6 @@ func Text(results []*comparer.Result, includePassing bool, tweaks []*config.Quer
 			}
 			status = "failed"
 		}
-		comparison := []string{
-			res.TestCase.Query,
-			fmt.Sprintf("%v", containsAggrFn(res.TestCase.Query)),
-			status,
-			fmt.Sprintf("%v", res.Range.Start.UnixNano()/1000000),
-			fmt.Sprintf("%v", res.Range.End.UnixNano()/1000000),
-			fmt.Sprintf("%v", res.Range.Step.Milliseconds()),
-			fmt.Sprintf("%v", res.Durations[0].Milliseconds()),
-			fmt.Sprintf("%v", res.Durations[1].Milliseconds()),
-		}
-		_ = w.Write(comparison)
 	}
 
 	fmt.Println(strings.Repeat("=", 80))
