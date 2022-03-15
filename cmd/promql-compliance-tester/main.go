@@ -122,7 +122,7 @@ func main() {
 	}
 	progressBar.Finish()
 
-	outp(results, *outputPassing, cfg.QueryTweaks)
+	outp(results, *outputPassing, cfg.QueryTweaks, cfg.TargetTotalDuration)
 }
 
 func getTime(timeStr string, defaultTime time.Time) time.Time {

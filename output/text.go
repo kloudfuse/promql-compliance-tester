@@ -12,7 +12,7 @@ import (
 )
 
 // Text produces text-based output for a number of query results.
-func Text(results []*comparer.Result, includePassing bool, tweaks []*config.QueryTweak) {
+func Text(results []*comparer.Result, includePassing bool, tweaks []*config.QueryTweak, targetTotalDuration string) {
 	successes := 0
 	unsupported := 0
 	var impl1Duration, impl2Duration time.Duration
@@ -96,6 +96,16 @@ func Text(results []*comparer.Result, includePassing bool, tweaks []*config.Quer
 	fmt.Printf("Total: %d / %d (%.2f%%) passed, %d unsupported\n", successes, len(results), 100*float64(successes)/float64(len(results)), unsupported)
 
 	fmt.Printf("Duration Ref prom: %v, Kfuse: %v\n", impl1Duration, impl2Duration)
+
+	if targetTotalDuration != "" {
+		duration, err := time.ParseDuration(targetTotalDuration)
+		if err != nil {
+			fmt.Printf("Error: Unable to parse input target total duration")
+		}
+		if impl2Duration > duration {
+			fmt.Printf("Kfuse duration %v exceeded target total duration %v\n", impl2Duration, duration)
+		}
+	}
 }
 
 func containsAggrFn(query string) bool {
