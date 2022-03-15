@@ -95,7 +95,7 @@ func Text(results []*comparer.Result, includePassing bool, tweaks []*config.Quer
 	fmt.Println(strings.Repeat("=", 80))
 	fmt.Printf("Total: %d / %d (%.2f%%) passed, %d unsupported\n", successes, len(results), 100*float64(successes)/float64(len(results)), unsupported)
 
-	fmt.Printf("Duration prom: %v, ref: %v\n", impl1Duration, impl2Duration)
+	fmt.Printf("Duration Ref prom: %v, Kfuse: %v\n", impl1Duration, impl2Duration)
 }
 
 func containsAggrFn(query string) bool {
