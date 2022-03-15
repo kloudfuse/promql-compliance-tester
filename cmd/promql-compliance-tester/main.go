@@ -2,10 +2,7 @@ package main
 
 import (
 	"flag"
-	"math"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/pkg/errors"
@@ -93,12 +90,7 @@ func main() {
 
 	comp := comparer.New(refAPI, testAPI, cfg.QueryTweaks)
 
-	end := getTime(cfg.QueryTimeParameters.EndTime, time.Now().UTC().Add(-2*time.Minute))
-	start := end.Add(
-		-getNonZeroDuration(cfg.QueryTimeParameters.RangeInSeconds, 10*time.Minute))
-	resolution := getNonZeroDuration(
-		cfg.QueryTimeParameters.ResolutionInSeconds, 10*time.Second)
-	expandedTestCases := testcases.ExpandTestCases(cfg.TestCases, cfg.QueryTweaks, start, end, resolution)
+	expandedTestCases := testcases.ExpandTestCases(cfg.TestCases, cfg.QueryTweaks, cfg.QueryTimeParameters)
 
 	progressBar := pb.StartNew(len(expandedTestCases))
 	results := make([]*comparer.Result, 0, len(cfg.TestCases))
@@ -123,31 +115,4 @@ func main() {
 	progressBar.Finish()
 
 	outp(results, *outputPassing, cfg.QueryTweaks, cfg.TargetTotalDuration)
-}
-
-func getTime(timeStr string, defaultTime time.Time) time.Time {
-	result, err := parseTime(timeStr)
-	if err != nil {
-		return defaultTime
-	}
-	return result
-}
-
-func getNonZeroDuration(
-	seconds float64, defaultDuration time.Duration) time.Duration {
-	if seconds == 0.0 {
-		return defaultDuration
-	}
-	return time.Duration(seconds * float64(time.Second))
-}
-
-func parseTime(s string) (time.Time, error) {
-	if t, err := strconv.ParseFloat(s, 64); err == nil {
-		s, ns := math.Modf(t)
-		return time.Unix(int64(s), int64(ns*float64(time.Second))).UTC(), nil
-	}
-	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
-		return t, nil
-	}
-	return time.Time{}, errors.Errorf("cannot parse %q to a valid timestamp", s)
 }
