@@ -15,6 +15,7 @@ type Config struct {
 	QueryTweaks           []*QueryTweak       `yaml:"query_tweaks"`
 	TestCases             []*TestCase         `yaml:"test_cases"`
 	QueryTimeParameters   QueryTimeParameters `yaml:"query_time_parameters"`
+	TargetTotalDuration   string              `yaml:"target_total_duration"`
 }
 
 type QueryTimeParameters struct {
