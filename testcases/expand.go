@@ -37,6 +37,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
@@ -201,6 +202,17 @@ func generateQueryTimeRangeParameters(queryTimeParameters config.QueryTimeParame
 	return ranges
 }
 
+// XXX: Remove this hack once histogram_quantile push down is supported.
+// Pin histogram quantile query to 15 minutes range
+func adjustRangeParameter(rangeParameter v1.Range, query string) v1.Range {
+	adjustedRange := v1.Range{End: rangeParameter.End, Start: rangeParameter.Start, Step: rangeParameter.Step}
+	if strings.Contains(query, "histogram_quantile") && strings.Contains(query, "rate") {
+		adjustedRange.Step = time.Duration(20 * float64(time.Second))
+		adjustedRange.Start = adjustedRange.End.Add(-time.Duration(900 * float64(time.Second)))
+	}
+	return adjustedRange
+}
+
 // ExpandTestCases returns the fully expanded test cases for a given set of templates test cases.
 func ExpandTestCases(cases []*config.TestCase, tweaks []*config.QueryTweak, queryTimeParameters config.QueryTimeParameters) []*comparer.TestCase {
 	ranges := generateQueryTimeRangeParameters(queryTimeParameters)
@@ -209,7 +221,7 @@ func ExpandTestCases(cases []*config.TestCase, tweaks []*config.QueryTweak, quer
 	for _, q := range cases {
 		vs := getVariants(q.Query, q.VariantArgs, make(map[string]string))
 		for _, v := range vs {
-			rangeParameter := ranges[rand.Intn(len(ranges))]
+			rangeParameter := adjustRangeParameter(ranges[rand.Intn(len(ranges))], v)
 			tc := &comparer.TestCase{
 				Query:          v,
 				SkipComparison: q.SkipComparison,
