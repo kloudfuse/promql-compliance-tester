@@ -156,8 +156,9 @@ func generateQueryTimeRangeParameters(queryTimeParameters config.QueryTimeParame
 		endTime, err := parseTime(queryTimeParameters.EndTime)
 		if err == nil {
 			endTimes = append(endTimes, endTime)
+		} else {
+			panic(fmt.Errorf("Invalid config QueryTimeParameters.EndTime received"))
 		}
-		panic(fmt.Errorf("Invalid config QueryTimeParameters.EndTime received"))
 	} else {
 		// Add an end timestamp that ensures at least some data is on a consuming segment.
 		endTimes = append(endTimes, time.Now().UTC().Add(-2*time.Minute))
