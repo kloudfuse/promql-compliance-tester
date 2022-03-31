@@ -207,7 +207,7 @@ func generateQueryTimeRangeParameters(queryTimeParameters config.QueryTimeParame
 // Pin histogram quantile query to 15 minutes range
 func adjustRangeParameter(rangeParameter v1.Range, query string) v1.Range {
 	adjustedRange := v1.Range{End: rangeParameter.End, Start: rangeParameter.Start, Step: rangeParameter.Step}
-	if strings.Contains(query, "histogram_quantile") && strings.Contains(query, "rate") {
+	if strings.Contains(query, "histogram_quantile") {
 		adjustedRange.Step = time.Duration(20 * float64(time.Second))
 		adjustedRange.Start = adjustedRange.End.Add(-time.Duration(900 * float64(time.Second)))
 	}
