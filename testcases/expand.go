@@ -161,7 +161,7 @@ func generateQueryTimeRangeParameters(queryTimeParameters config.QueryTimeParame
 		}
 	} else {
 		// Add an end timestamp that ensures at least some data is on a consuming segment.
-		endTimes = append(endTimes, time.Now().UTC().Add(-2*time.Minute))
+		endTimes = append(endTimes, time.Now().UTC().Add(-30*time.Minute))
 		// Add an end time that ensures at least some data is an offline segment
 		endTimes = append(endTimes, time.Now().UTC().Add(-12*time.Hour))
 	}
