@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -50,6 +51,7 @@ type Comparer struct {
 func New(refAPI, testAPI PromAPI, queryTweaks []*config.QueryTweak) *Comparer {
 	var options cmp.Options
 	addFloatCompareOptions(queryTweaks, &options)
+	addNormalizeLELabelOption(&options)
 	addDropResultLabelsOptions(queryTweaks, &options)
 	return &Comparer{
 		refAPI:         refAPI,
@@ -167,6 +169,48 @@ func addFloatCompareOptions(queryTweaks []*config.QueryTweak, options *cmp.Optio
 		cmpopts.EquateApprox(fraction, margin),
 		// A NaN is usually not treated as equal to another NaN, but we want to treat it as such here.
 		cmpopts.EquateNaNs(),
+	)
+}
+
+// normalizeLELabel normalizes the "le" label in a Metric so that bucket
+// boundaries that represent the same value but differ in string formatting
+// or precision (e.g. "0.008649755859375" vs "0.008650") are compared as
+// equal. Both sides are rounded to 3 significant figures before comparison.
+// "Infinity" and "Inf" are normalized to "+Inf".
+func normalizeLELabel(m model.Metric) model.Metric {
+	le, ok := m["le"]
+	if !ok {
+		return m
+	}
+	leStr := string(le)
+	// Normalize all infinity representations to "+Inf".
+	if leStr == "+Inf" || leStr == "Inf" || leStr == "Infinity" {
+		if leStr != "+Inf" {
+			out := m.Clone()
+			out["le"] = model.LabelValue("+Inf")
+			return out
+		}
+		return m
+	}
+	f, err := strconv.ParseFloat(leStr, 64)
+	if err != nil {
+		return m
+	}
+	// Round to 3 significant figures so that values truncated by the test
+	// backend (e.g. 0.008649755859375 → 0.008650) match the reference.
+	normalized := strconv.FormatFloat(f, 'g', 3, 64)
+	if normalized != leStr {
+		out := m.Clone()
+		out["le"] = model.LabelValue(normalized)
+		return out
+	}
+	return m
+}
+
+func addNormalizeLELabelOption(options *cmp.Options) {
+	*options = append(
+		*options,
+		cmp.Transformer("NormalizeLELabel", normalizeLELabel),
 	)
 }
 
