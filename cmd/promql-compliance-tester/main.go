@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"net/http"
+	"time"
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/pkg/errors"
@@ -92,24 +93,52 @@ func main() {
 
 	expandedTestCases := testcases.ExpandTestCases(cfg.TestCases, cfg.QueryTweaks, cfg.QueryTimeParameters)
 
-	progressBar := pb.StartNew(len(expandedTestCases))
-	results := make([]*comparer.Result, 0, len(cfg.TestCases))
-	for _, tc := range expandedTestCases {
-		res, err := comp.Compare(tc)
-		if err != nil {
-			log.Infof("Error running comparison: %v", err)
-			log.Infof("testcase: %v", tc)
-			if *stopOnFailure {
-				break
-			}
-			continue
+	// With second_pass enabled, every case runs twice: once as expanded,
+	// and once with its window advanced by shift_steps whole steps (same
+	// grid phase). The second pass starts only after the first completes,
+	// so a result cache warmed by pass one has settled by pass two.
+	passes := [][]*comparer.TestCase{expandedTestCases}
+	if cfg.SecondPass.Enabled {
+		shiftSteps := cfg.SecondPass.ShiftSteps
+		if shiftSteps <= 0 {
+			shiftSteps = 1
 		}
+		shifted := make([]*comparer.TestCase, 0, len(expandedTestCases))
+		for _, tc := range expandedTestCases {
+			tc2 := *tc
+			shift := time.Duration(shiftSteps) * tc.Resolution
+			tc2.Start = tc.Start.Add(shift)
+			tc2.End = tc.End.Add(shift)
+			shifted = append(shifted, &tc2)
+		}
+		passes = append(passes, shifted)
+	}
 
-		progressBar.Increment()
-		results = append(results, res)
-		if !res.Success() && *stopOnFailure {
-			log.Info("encountered failure.. Stopping")
-			break
+	total := 0
+	for _, pass := range passes {
+		total += len(pass)
+	}
+	progressBar := pb.StartNew(total)
+	results := make([]*comparer.Result, 0, total)
+outer:
+	for _, pass := range passes {
+		for _, tc := range pass {
+			res, err := comp.Compare(tc)
+			if err != nil {
+				log.Infof("Error running comparison: %v", err)
+				log.Infof("testcase: %v", tc)
+				if *stopOnFailure {
+					break outer
+				}
+				continue
+			}
+
+			progressBar.Increment()
+			results = append(results, res)
+			if !res.Success() && *stopOnFailure {
+				log.Info("encountered failure.. Stopping")
+				break outer
+			}
 		}
 	}
 	progressBar.Finish()
