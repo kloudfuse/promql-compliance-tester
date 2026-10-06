@@ -15,6 +15,7 @@ type Config struct {
 	QueryTweaks           []*QueryTweak       `yaml:"query_tweaks"`
 	TestCases             []*TestCase         `yaml:"test_cases"`
 	QueryTimeParameters   QueryTimeParameters `yaml:"query_time_parameters"`
+	SecondPass            SecondPassConfig    `yaml:"second_pass"`
 	TargetTotalDuration   string              `yaml:"target_total_duration"`
 }
 
@@ -22,6 +23,21 @@ type QueryTimeParameters struct {
 	EndTime             string  `yaml:"end_time"`
 	RangeInSeconds      float64 `yaml:"range_in_seconds"`
 	ResolutionInSeconds float64 `yaml:"resolution_in_seconds"`
+}
+
+// SecondPassConfig re-runs every expanded test case a second time after the
+// whole first pass completes, with the query window advanced by ShiftSteps
+// whole steps. Both passes are compared against the reference
+// independently. Purpose: back-to-back validation of query-service's
+// cross-request result cache — the first pass warms it, and the shifted
+// second pass must serve a spliced (cached prefix + fresh tail) response
+// that still matches the reference exactly. Shifting by whole steps keeps
+// the evaluation grid phase identical, which is what makes the second
+// pass hit the same cache keys; running pass two only after pass one
+// finishes hides the cache's asynchronous store latency.
+type SecondPassConfig struct {
+	Enabled    bool `yaml:"enabled"`
+	ShiftSteps int  `yaml:"shift_steps"`
 }
 
 // TargetConfig represents the configuration of a single Prometheus API endpoint.
